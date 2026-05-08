@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON CHESS - SHAURYA MITTAL</title>
+    <style>
+        :root {
+            /* Dark Theme (Default) */
+            --bg: #050505;
+            --surface: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #ffffff;
+            --accent: #00f2ff;
+            --accent-glow: rgba(0, 242, 255, 0.5);
+            --sq-white: #1e213a;
+            --sq-black: #0d1117;
+            --highlight: rgba(0, 242, 255, 0.3);
+            --possible: rgba(255, 255, 255, 0.2);
+            --header-glow: #00f2ff;
+        }
+
+        body.light-theme {
+            --bg: #f0f2f5;
+            --surface: rgba(0, 0, 0, 0.05);
+            --border: rgba(0, 0, 0, 0.1);
+            --text: #1a1a1a;
+            --accent: #7000ff;
+            --accent-glow: rgba(112, 0, 255, 0.3);
+            --sq-white: #ffffff;
+            --sq-black: #cbd5e0;
+            --highlight: rgba(112, 0, 255, 0.2);
+            --possible: rgba(0, 0, 0, 0.1);
+            --header-glow: #7000ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            padding-top: 80px;
+        }
+
+        /* --- HEADER --- */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 60px;
+            background: var(--surface);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .neon-header {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: 5px;
+            color: #fff;
+            text-shadow: 0 0 10px var(--header-glow), 0 0 20px var(--header-glow);
+            animation: pulse 2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.8; text-shadow: 0 0 10px var(--header-glow); }
+            to { opacity: 1; text-shadow: 0 0 20px var(--header-glow), 0 0 30px var(--header-glow); }
+        }
+
+        /* --- UI PANELS --- */
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .controls, .status-panel {
+            background: var(--surface);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 250px;
+        }
+
+        /* --- CHESS BOARD --- */
+        #board-wrapper {
+            position: relative;
+            padding: 10px;
+            background: var(--surface);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: min(90vw, 500px);
+            height: min(90vw, 500px);
+            border: 2px solid var(--border);
+        }
+
+        .square {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: min(8vw, 40px);
+            cursor: pointer;
+        }
+
+        .square.white { background: var(--sq-white); }
+        .square.black { background: var(--sq-black); }
+
+        .square:hover::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .piece {
+            z-index: 10;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+            user-select: none;
+        }
+
+        .piece.white-p { color: #fff; filter: drop-shadow(0 0 2px #000); }
+        .piece.black-p { color: #ff0055; filter: drop-shadow(0 0 5px rgba(255, 0, 85, 0.5)); }
+
+        body.light-theme .piece.black-p { color: #222; }
+
+        /* --- EFFECTS --- */
+        .selected { background: var(--highlight) !important; box-shadow: inset 0 0 20px var(--accent-glow); }
+        
+        .possible::after {
+            content: '';
+            width: 15px;
+            height: 15px;
+            background: var(--possible);
+            border-radius: 50%;
+        }
+
+        .capture-hint::after {
+            content: '';
+            width: 80%;
+            height: 80%;
+            border: 3px solid var(--possible);
+            border-radius: 50%;
+        }
+
+        /* --- BUTTONS & INPUTS --- */
+        button, select {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        
+        .active-turn {
+            border-left: 5px solid var(--accent);
+            padding-left: 10px;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            50% { border-left-color: transparent; }
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 800px) {
+            .container { flex-direction: column; align-items: center; }
+            header { position: relative; }
+            body { padding-top: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="neon-header">🔥 SHAURYA MITTAL 🔥</div>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <h3>🎮 SETTINGS</h3>
+            <button onclick="toggleTheme()" id="theme-btn">🌗 Switch Theme</button>
+            
+            <label>Game Mode:</label>
+            <select id="mode-select" onchange="resetGame()">
+                <option value="pvp">👥 Player vs Player</option>
+                <option value="pve">🤖 Player vs Computer</option>
+            </select>
+
+            <label>AI Difficulty:</label>
+            <select id="difficulty-select">
+                <option value="easy">🟢 Easy AI</option>
+                <option value="medium">🟡 Medium AI</option>
+                <option value="hard">🔴 Hard AI</option>
+            </select>
+
+            <hr style="opacity: 0.1">
+            <button onclick="undoMove()">🔙 Undo Move</button>
+            <button onclick="resetGame()" style="background: rgba(255,0,0,0.1)">🔄 Restart Game</button>
+        </div>
+
+        <div id="board-wrapper">
+            <div id="board"></div>
+        </div>
+
+        <div class="status-panel">
+            <h3>📊 STATUS</h3>
+            <div id="turn-display" class="active-turn">White's Turn</div>
+            <div id="move-history" style="font-size: 0.8rem; opacity: 0.7; max-height: 100px; overflow-y: auto;">
+                Game Started.
+            </div>
+        </div>
+    </div>
+
+<script>
+    const boardEl = document.getElementById('board');
+    const turnDisplay = document.getElementById('turn-display');
+    const historyEl = document.getElementById('move-history');
+    
+    let board = [];
+    let turn = 'white';
+    let selectedSq = null;
+    let history = [];
+    
+    const PIECES = {
+        white: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
+        black: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
+    };
+
+    const VALUES = { p: 10, n: 30, b: 35, r: 50, q: 90, k: 900 };
+
+    function initGame() {
+        const layout = [
+            ['r','n','b','q','k','b','n','r'],
+            ['p','p','p','p','p','p','p','p'],
+            Array(8).fill(null), Array(8).fill(null), Array(8).fill(null), Array(8).fill(null),
+            ['P','P','P','P','P','P','P','P'],
+            ['R','N','B','Q','K','B','N','R']
+        ];
+        
+        board = layout.map((row, r) => row.map((char, c) => {
+            if (!char) return null;
+            return {
+                type: char.toLowerCase(),
+                color: char === char.toUpperCase() ? 'white' : 'black'
+            };
+        }));
+        render();
+        loadTheme();
+    }
+
+    function render() {
+        boardEl.innerHTML = '';
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                const sq = document.createElement('div');
+                sq.className = `square ${(r + c) % 2 === 0 ? 'white' : 'black'}`;
+                sq.dataset.r = r; sq.dataset.c = c;
+                
+                const piece = board[r][c];
+                if (piece) {
+                    const pEl = document.createElement('div');
+                    pEl.className = `piece ${piece.color}-p`;
+                    pEl.innerHTML = PIECES[piece.color][piece.type];
+                    sq.appendChild(pEl);
+                }
+                sq.onclick = () => onSquareClick(r, c);
+                boardEl.appendChild(sq);
+            }
+        }
+        updateUI();
+    }
+
+    function onSquareClick(r, c) {
+        if (document.getElementById('mode-select').value === 'pve' && turn === 'black') return;
+
+        const piece = board[r][c];
+
+        if (selectedSq) {
+            const moves = getLegalMoves(selectedSq.r, selectedSq.c);
+            const move = moves.find(m => m.r === r && m.c === c);
+            
+            if (move) {
+                makeMove(selectedSq.r, selectedSq.c, r, c);
+                selectedSq = null;
+                return;
+            }
+        }
+
+        if (piece && piece.color === turn) {
+            selectedSq = { r, c };
+            highlightMoves(r, c);
+        } else {
+            selectedSq = null;
+            render();
+        }
+    }
+
+    function highlightMoves(r, c) {
+        render();
+        document.querySelector(`[data-r="${r}"][data-c="${c}"]`).classList.add('selected');
+        const moves = getLegalMoves(r, c);
+        moves.forEach(m => {
+            const el = document.querySelector(`[data-r="${m.r}"][data-c="${m.c}"]`);
+            el.classList.add(board[m.r][m.c] ? 'capture-hint' : 'possible');
+        });
+    }
+
+    function getLegalMoves(r, c) {
+        const piece = board[r][c];
+        const moves = [];
+        const directions = {
+            n: [[1,2], [1,-2], [-1,2], [-1,-2], [2,1], [2,-1], [-2,1], [-2,-1]],
+            b: [[1,1], [1,-1], [-1,1], [-1,-1]],
+            r: [[1,0], [-1,0], [0,1], [0,-1]],
+            q: [[1,1], [1,-1], [-1,1], [-1,-1], [1,0], [-1,0], [0,1], [0,-1]],
+            k: [[1,1], [1,-1], [-1,1], [-1,-1], [1,0], [-1,0], [0,1], [0,-1]]
+        };
+
+        if (piece.type === 'p') {
+            const dir = piece.color === 'white' ? -1 : 1;
+            if (board[r+dir] && !board[r+dir][c]) {
+                moves.push({r: r+dir, c});
+                if (((piece.color === 'white' && r === 6) || (piece.color === 'black' && r === 1)) && !board[r+2*dir][c]) {
+                    moves.push({r: r+2*dir, c});
+                }
+            }
+            [[dir, 1], [dir, -1]].forEach(d => {
+                const nr = r+d[0], nc = c+d[1];
+                if (board[nr] && board[nr][nc] && board[nr][nc].color !== piece.color) moves.push({r: nr, c: nc});
+            });
+        } else if (directions[piece.type]) {
+            directions[piece.type].forEach(d => {
+                let nr = r + d[0], nc = c + d[1];
+                while (nr >= 0 && nr < 8 && nc >= 0 && nc < 8) {
+                    if (!board[nr][nc]) moves.push({r: nr, c: nc});
+                    else {
+                        if (board[nr][nc].color !== piece.color) moves.push({r: nr, c: nc});
+                        break;
+                    }
+                    if (piece.type === 'n' || piece.type === 'k') break;
+                    nr += d[0]; nc += d[1];
+                }
+            });
+        }
+        return moves;
+    }
+
+    function makeMove(fr, fc, tr, tc) {
+        history.push(JSON.parse(JSON.stringify(board)));
+        const piece = board[fr][fc];
+        
+        // Move piece
+        board[tr][tc] = piece;
+        board[fr][fc] = null;
+        
+        // Promotion
+        if (piece.type === 'p' && (tr === 0 || tr === 7)) piece.type = 'q';
+
+        turn = turn === 'white' ? 'black' : 'white';
+        render();
+
+        if (document.getElementById('mode-select').value === 'pve' && turn === 'black') {
+            setTimeout(aiThink, 500);
+        }
+    }
+
+    function aiThink() {
+        const diff = document.getElementById('difficulty-select').value;
+        const allMoves = [];
+        
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                if (board[r][c] && board[r][c].color === 'black') {
+                    getLegalMoves(r, c).forEach(m => {
+                        allMoves.push({fr: r, fc: c, tr: m.r, tc: m.c, score: 0});
+                    });
+                }
+            }
+        }
+
+        if (allMoves.length === 0) return;
+
+        if (diff === 'easy') {
+            const m = allMoves[Math.floor(Math.random() * allMoves.length)];
+            makeMove(m.fr, m.fc, m.tr, m.tc);
+        } else {
+            allMoves.forEach(m => {
+                const target = board[m.tr][m.tc];
+                if (target) m.score += VALUES[target.type] * 10;
+                
+                if (diff === 'hard') {
+                    // Position score (center control)
+                    m.score += (3 - Math.abs(3.5 - m.tr)) + (3 - Math.abs(3.5 - m.tc));
+                    // Check if move puts piece in danger
+                    board[m.tr][m.tc] = board[m.fr][m.fc];
+                    board[m.fr][m.fc] = null;
+                    if (isUnderAttack(m.tr, m.tc, 'white')) m.score -= VALUES[board[m.tr][m.tc].type];
+                    // Backtrack simulation
+                    board[m.fr][m.fc] = board[m.tr][m.tc];
+                    board[m.tr][m.tc] = target;
+                }
+            });
+            allMoves.sort((a, b) => b.score - a.score);
+            const best = allMoves[0];
+            makeMove(best.fr, best.fc, best.tr, best.tc);
+        }
+    }
+
+    function isUnderAttack(r, c, attackerColor) {
+        for (let ir = 0; ir < 8; ir++) {
+            for (let ic = 0; ic < 8; ic++) {
+                if (board[ir][ic] && board[ir][ic].color === attackerColor) {
+                    const moves = getLegalMoves(ir, ic);
+                    if (moves.some(m => m.r === r && m.c === c)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function updateUI() {
+        turnDisplay.innerText = `${turn.charAt(0).toUpperCase() + turn.slice(1)}'s Turn`;
+        turnDisplay.style.color = turn === 'white' ? 'var(--text)' : '#ff0055';
+    }
+
+    function undoMove() {
+        if (history.length > 0) {
+            board = history.pop();
+            // In PVE, undo twice to go back to player's last turn
+            if (document.getElementById('mode-select').value === 'pve' && history.length > 0) {
+                board = history.pop();
+                turn = 'white';
+            } else {
+                turn = turn === 'white' ? 'black' : 'white';
+            }
+            render();
+        }
+    }
+
+    function resetGame() {
+        history = [];
+        turn = 'white';
+        selectedSq = null;
+        initGame();
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-theme');
+        const isLight = document.body.classList.contains('light-theme');
+        localStorage.setItem('chessTheme', isLight ? 'light' : 'dark');
+    }
+
+    function loadTheme() {
+        const saved = localStorage.getItem('chessTheme');
+        if (saved === 'light') document.body.classList.add('light-theme');
+    }
+
+    initGame();
+</script>
+</body>
+</html>
